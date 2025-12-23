@@ -56,28 +56,32 @@ function AppContent() {
 
     setLoading(true);
 
-    const [membersResult, habitsResult] = await Promise.all([
-      supabase
-        .from('family_members')
-        .select('*')
-        .eq('family_id', currentFamily.id)
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('habits')
-        .select('*')
-        .eq('family_id', currentFamily.id)
-        .order('created_at', { ascending: true }),
-    ]);
+    try {
+      const [membersResult, habitsResult] = await Promise.all([
+        supabase
+          .from('family_members')
+          .select('*')
+          .eq('family_id', currentFamily.id)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('habits')
+          .select('*')
+          .eq('family_id', currentFamily.id)
+          .order('created_at', { ascending: true }),
+      ]);
 
-    if (membersResult.data) {
-      setMembers(membersResult.data);
+      if (membersResult.data) {
+        setMembers(membersResult.data);
+      }
+
+      if (habitsResult.data) {
+        setHabits(habitsResult.data);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
     }
-
-    if (habitsResult.data) {
-      setHabits(habitsResult.data);
-    }
-
-    setLoading(false);
   };
 
   const tabs = [
@@ -156,6 +160,8 @@ function App() {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const initializeFamily = async () => {
       const savedFamilyCode = localStorage.getItem('familyCode');
       if (savedFamilyCode && !currentFamily) {
@@ -165,20 +171,28 @@ function App() {
             .select('*')
             .eq('join_code', savedFamilyCode)
             .maybeSingle();
-          if (data) {
+          if (isMounted && data) {
             setCurrentFamily(data);
-          } else {
+          } else if (!data) {
             localStorage.removeItem('familyCode');
           }
         } catch (err) {
           console.error('Failed to load family:', err);
-          localStorage.removeItem('familyCode');
+          if (isMounted) {
+            localStorage.removeItem('familyCode');
+          }
         }
       }
-      setInitialized(true);
+      if (isMounted) {
+        setInitialized(true);
+      }
     };
 
     initializeFamily();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (!initialized) {
