@@ -27,27 +27,41 @@ function AppContent() {
   useEffect(() => {
     if (!currentFamily) return;
 
-    const membersSubscription = supabase
-      .from('family_members')
-      .on('*', (payload) => {
-        if (payload.new.family_id === currentFamily.id) {
+    const membersChannel = supabase
+      .channel(`public:family_members:${currentFamily.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'family_members',
+          filter: `family_id=eq.${currentFamily.id}`,
+        },
+        () => {
           loadData();
         }
-      })
+      )
       .subscribe();
 
-    const habitsSubscription = supabase
-      .from('habits')
-      .on('*', (payload) => {
-        if (payload.new.family_id === currentFamily.id) {
+    const habitsChannel = supabase
+      .channel(`public:habits:${currentFamily.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'habits',
+          filter: `family_id=eq.${currentFamily.id}`,
+        },
+        () => {
           loadData();
         }
-      })
+      )
       .subscribe();
 
     return () => {
-      membersSubscription.unsubscribe();
-      habitsSubscription.unsubscribe();
+      supabase.removeChannel(membersChannel);
+      supabase.removeChannel(habitsChannel);
     };
   }, [currentFamily]);
 
