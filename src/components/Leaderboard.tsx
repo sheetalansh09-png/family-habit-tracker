@@ -16,17 +16,24 @@ export function Leaderboard({ members, habits, family }: LeaderboardProps) {
   useEffect(() => {
     calculateLeaderboard();
 
-    const subscription = supabase
-      .from('completions')
-      .on('*', (payload) => {
-        if (payload.new.family_id === family.id) {
+    const channel = supabase
+      .channel(`leaderboard:${family.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'completions',
+          filter: `family_id=eq.${family.id}`,
+        },
+        () => {
           calculateLeaderboard();
         }
-      })
+      )
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [members, habits, timeframe, family.id]);
 

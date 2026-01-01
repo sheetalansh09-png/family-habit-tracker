@@ -30,21 +30,24 @@ export function HomePage({ members, habits, family, onDataChange }: HomePageProp
   useEffect(() => {
     if (!selectedMember) return;
 
-    const subscription = supabase
-      .from('completions')
-      .on('*', (payload) => {
-        if (
-          payload.new.member_id === selectedMember.id &&
-          payload.new.date === today &&
-          payload.new.family_id === family.id
-        ) {
+    const channel = supabase
+      .channel(`completions:${selectedMember.id}:${today}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'completions',
+          filter: `member_id=eq.${selectedMember.id}`,
+        },
+        () => {
           loadCompletions();
         }
-      })
+      )
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [selectedMember, family.id, today]);
 

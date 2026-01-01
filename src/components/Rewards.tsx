@@ -72,17 +72,24 @@ export function Rewards({ members, habits, family }: RewardsProps) {
   useEffect(() => {
     calculateBadges();
 
-    const subscription = supabase
-      .from('completions')
-      .on('*', (payload) => {
-        if (payload.new.family_id === family.id) {
+    const channel = supabase
+      .channel(`rewards:${family.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'completions',
+          filter: `family_id=eq.${family.id}`,
+        },
+        () => {
           calculateBadges();
         }
-      })
+      )
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [members, habits, family.id]);
 
