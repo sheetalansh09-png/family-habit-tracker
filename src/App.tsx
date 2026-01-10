@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Home, Trophy, Award, Settings as SettingsIcon } from 'lucide-react';
+import { Home, Trophy, Award, Settings as SettingsIcon, Calendar as CalendarIcon } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { FamilyMember, Habit, Family } from './types';
 import { HomePage } from './components/HomePage';
 import { Leaderboard } from './components/Leaderboard';
 import { Rewards } from './components/Rewards';
 import { Settings } from './components/Settings';
+import { Calendar } from './components/Calendar';
 import { FamilySelector } from './components/FamilySelector';
 import { useFamily } from './context/FamilyContext';
 
-type Tab = 'home' | 'leaderboard' | 'rewards' | 'settings';
+type Tab = 'home' | 'leaderboard' | 'rewards' | 'settings' | 'calendar';
 
 function AppContent() {
   const { currentFamily } = useFamily();
@@ -102,6 +103,7 @@ function AppContent() {
     { id: 'home' as Tab, label: 'Home', icon: Home },
     { id: 'leaderboard' as Tab, label: 'Leaderboard', icon: Trophy },
     { id: 'rewards' as Tab, label: 'Rewards', icon: Award },
+    { id: 'calendar' as Tab, label: 'Calendar', icon: CalendarIcon },
     { id: 'settings' as Tab, label: 'Settings', icon: SettingsIcon },
   ];
 
@@ -157,6 +159,9 @@ function AppContent() {
               )}
               {activeTab === 'rewards' && (
                 <Rewards members={members} habits={habits} family={currentFamily} />
+              )}
+              {activeTab === 'calendar' && (
+                <Calendar family={currentFamily} members={members} habits={habits} />
               )}
               {activeTab === 'settings' && (
                 <Settings members={members} habits={habits} family={currentFamily} onDataChange={loadData} />

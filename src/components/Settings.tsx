@@ -57,6 +57,7 @@ export function Settings({ members, habits, family, onDataChange }: SettingsProp
   const [habitWeeklyTarget, setHabitWeeklyTarget] = useState(7);
   const [habitMonthlyTarget, setHabitMonthlyTarget] = useState(30);
   const [habitCategory, setHabitCategory] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
@@ -91,7 +92,7 @@ export function Settings({ members, habits, family, onDataChange }: SettingsProp
   const handleAddHabit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    await supabase.from('habits').insert({
+    const habitResult = await supabase.from('habits').insert({
       name: habitName,
       icon: habitIcon,
       points: habitPoints,
@@ -101,7 +102,19 @@ export function Settings({ members, habits, family, onDataChange }: SettingsProp
       monthly_target: habitMonthlyTarget,
       category: habitCategory || null,
       family_id: family.id,
-    });
+    }).select();
+
+    if (habitResult.data && habitResult.data.length > 0) {
+      const habitId = habitResult.data[0].id;
+
+      if (selectedMembers.length > 0) {
+        const habitMembers = selectedMembers.map((memberId) => ({
+          habit_id: habitId,
+          member_id: memberId,
+        }));
+        await supabase.from('habit_members').insert(habitMembers);
+      }
+    }
 
     setHabitName('');
     setHabitIcon(ICON_OPTIONS[0]);
@@ -111,6 +124,7 @@ export function Settings({ members, habits, family, onDataChange }: SettingsProp
     setHabitWeeklyTarget(7);
     setHabitMonthlyTarget(30);
     setHabitCategory('');
+    setSelectedMembers([]);
     setShowHabitForm(false);
     onDataChange();
   };
@@ -471,6 +485,42 @@ export function Settings({ members, habits, family, onDataChange }: SettingsProp
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   placeholder="e.g., Health, Learning, Wellness"
                 />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Assign to Family Members
+                </label>
+                <div className="space-y-2">
+                  {members.map((member) => (
+                    <label key={member.id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedMembers.includes(member.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedMembers([...selectedMembers, member.id]);
+                          } else {
+                            setSelectedMembers(selectedMembers.filter((id) => id !== member.id));
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-600"
+                      />
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-lg"
+                          style={{ backgroundColor: member.color }}
+                        >
+                          {member.avatar}
+                        </div>
+                        <span className="text-gray-900 font-medium">{member.name}</span>
+                      </div>
+                    </label>
+                  ))}
+                  {members.length === 0 && (
+                    <p className="text-sm text-gray-500 py-3">No family members added yet</p>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-2">

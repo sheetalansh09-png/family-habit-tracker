@@ -28,6 +28,13 @@ export interface Habit {
   created_at: string;
 }
 
+export interface HabitMember {
+  id: string;
+  habit_id: string;
+  member_id: string;
+  created_at: string;
+}
+
 export interface Completion {
   id: string;
   family_id: string;
