@@ -18,12 +18,19 @@ function AppContent() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCalendarMember, setSelectedCalendarMember] = useState<FamilyMember | null>(null);
 
   useEffect(() => {
     if (currentFamily) {
       loadData();
     }
   }, [currentFamily]);
+
+  useEffect(() => {
+    if (members.length > 0 && !selectedCalendarMember) {
+      setSelectedCalendarMember(members[0]);
+    }
+  }, [members, selectedCalendarMember]);
 
   useEffect(() => {
     if (!currentFamily) return;
@@ -161,7 +168,13 @@ function AppContent() {
                 <Rewards members={members} habits={habits} family={currentFamily} />
               )}
               {activeTab === 'calendar' && (
-                <Calendar family={currentFamily} members={members} habits={habits} />
+                <Calendar
+                  family={currentFamily}
+                  members={members}
+                  habits={habits}
+                  selectedMember={selectedCalendarMember}
+                  onMemberChange={setSelectedCalendarMember}
+                />
               )}
               {activeTab === 'settings' && (
                 <Settings members={members} habits={habits} family={currentFamily} onDataChange={loadData} />

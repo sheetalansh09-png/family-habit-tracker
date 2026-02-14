@@ -7,28 +7,36 @@ interface CalendarProps {
   family: Family;
   members: FamilyMember[];
   habits: Habit[];
+  selectedMember: FamilyMember | null;
+  onMemberChange: (member: FamilyMember) => void;
 }
 
-export function Calendar({ family, members, habits }: CalendarProps) {
+export function Calendar({ family, members, habits, selectedMember, onMemberChange }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [completions, setCompletions] = useState<Completion[]>([]);
-  const [habitMemberCount, setHabitMemberCount] = useState(0);
+  const [assignedHabitCount, setAssignedHabitCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, [family.id]);
+    if (selectedMember) {
+      loadData();
+    }
+  }, [selectedMember?.id, family.id]);
 
   const loadData = async () => {
+    if (!selectedMember) return;
+
     try {
       const { data: completionData } = await supabase
         .from('completions')
         .select('*')
+        .eq('member_id', selectedMember.id)
         .eq('family_id', family.id);
 
       const { data: habitMemberData } = await supabase
         .from('habit_members')
         .select('id')
+        .eq('member_id', selectedMember.id)
         .eq('family_id', family.id);
 
       if (completionData) {
@@ -36,7 +44,7 @@ export function Calendar({ family, members, habits }: CalendarProps) {
       }
 
       if (habitMemberData) {
-        setHabitMemberCount(habitMemberData.length);
+        setAssignedHabitCount(habitMemberData.length);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -54,14 +62,14 @@ export function Calendar({ family, members, habits }: CalendarProps) {
   };
 
   const getCompletionPercentage = (date: Date) => {
-    if (habitMemberCount === 0) return 0;
+    if (assignedHabitCount === 0) return 0;
 
     const dateStr = date.toISOString().split('T')[0];
-    const dayCompletions = completions.filter((c) => c.date === dateStr);
+    const dayCompletions = completions.filter((c) => c.date === dateStr && c.count > 0);
 
     if (dayCompletions.length === 0) return 0;
 
-    return (dayCompletions.length / habitMemberCount) * 100;
+    return (dayCompletions.length / assignedHabitCount) * 100;
   };
 
   const getColorByPercentage = (percentage: number) => {
@@ -106,10 +114,45 @@ export function Calendar({ family, members, habits }: CalendarProps) {
     );
   }
 
+  if (!selectedMember) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600 mb-2">No family member selected</p>
+        <p className="text-sm text-gray-500">Go to Home tab to select a member</p>
+      </div>
+    );
+  }
+
   return (
     <div>
+      <div className="mb-6">
+        <h2 className="text-sm font-medium text-gray-700 mb-3">Select Family Member</h2>
+        <div className="flex flex-wrap gap-2">
+          {members.map((member) => (
+            <button
+              key={member.id}
+              onClick={() => onMemberChange(member)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                selectedMember?.id === member.id
+                  ? 'ring-2 ring-offset-2 shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              style={{
+                backgroundColor:
+                  selectedMember?.id === member.id ? member.color : undefined,
+                color: selectedMember?.id === member.id ? 'white' : undefined,
+                borderColor: member.color,
+              }}
+            >
+              <span className="mr-2">{member.avatar}</span>
+              {member.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Habit Calendar</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{selectedMember.name}'s Habit Calendar</h2>
         <div className="flex items-center gap-4">
           <button
             onClick={handlePrevMonth}
