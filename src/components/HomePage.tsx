@@ -13,6 +13,7 @@ interface HomePageProps {
 export function HomePage({ members, habits, family, onDataChange }: HomePageProps) {
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
   const [completions, setCompletions] = useState<Completion[]>([]);
+  const [assignedHabits, setAssignedHabits] = useState<string[]>([]);
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
@@ -23,9 +24,24 @@ export function HomePage({ members, habits, family, onDataChange }: HomePageProp
 
   useEffect(() => {
     if (selectedMember) {
+      loadAssignedHabits();
       loadCompletions();
     }
   }, [selectedMember]);
+
+  const loadAssignedHabits = async () => {
+    if (!selectedMember) return;
+
+    const { data } = await supabase
+      .from('habit_members')
+      .select('habit_id')
+      .eq('member_id', selectedMember.id)
+      .eq('family_id', family.id);
+
+    if (data) {
+      setAssignedHabits(data.map((h) => h.habit_id));
+    }
+  };
 
   useEffect(() => {
     if (!selectedMember) return;
@@ -158,7 +174,7 @@ export function HomePage({ members, habits, family, onDataChange }: HomePageProp
             Today's Habits for {selectedMember.name}
           </h2>
           <div className="space-y-3">
-            {habits.map((habit) => {
+            {habits.filter((habit) => assignedHabits.includes(habit.id)).map((habit) => {
               const count = getCompletionCount(habit.id);
               const progress = (count / habit.daily_target) * 100;
 

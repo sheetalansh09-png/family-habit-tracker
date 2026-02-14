@@ -12,23 +12,34 @@ interface CalendarProps {
 export function Calendar({ family, members, habits }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [completions, setCompletions] = useState<Completion[]>([]);
+  const [habitMemberCount, setHabitMemberCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadCompletions();
-  }, []);
+    loadData();
+  }, [family.id]);
 
-  const loadCompletions = async () => {
+  const loadData = async () => {
     try {
-      const { data } = await supabase
-        .from('habit_completions')
+      const { data: completionData } = await supabase
+        .from('completions')
         .select('*')
         .eq('family_id', family.id);
-      if (data) {
-        setCompletions(data);
+
+      const { data: habitMemberData } = await supabase
+        .from('habit_members')
+        .select('id')
+        .eq('family_id', family.id);
+
+      if (completionData) {
+        setCompletions(completionData);
+      }
+
+      if (habitMemberData) {
+        setHabitMemberCount(habitMemberData.length);
       }
     } catch (error) {
-      console.error('Error loading completions:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -43,17 +54,14 @@ export function Calendar({ family, members, habits }: CalendarProps) {
   };
 
   const getCompletionPercentage = (date: Date) => {
-    if (habits.length === 0 || members.length === 0) return 0;
+    if (habitMemberCount === 0) return 0;
 
     const dateStr = date.toISOString().split('T')[0];
     const dayCompletions = completions.filter((c) => c.date === dateStr);
 
     if (dayCompletions.length === 0) return 0;
 
-    const totalPossible = habits.length * members.length;
-    const completed = dayCompletions.length;
-
-    return (completed / totalPossible) * 100;
+    return (dayCompletions.length / habitMemberCount) * 100;
   };
 
   const getColorByPercentage = (percentage: number) => {

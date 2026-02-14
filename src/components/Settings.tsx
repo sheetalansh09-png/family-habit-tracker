@@ -111,6 +111,7 @@ export function Settings({ members, habits, family, onDataChange }: SettingsProp
         const habitMembers = selectedMembers.map((memberId) => ({
           habit_id: habitId,
           member_id: memberId,
+          family_id: family.id,
         }));
         await supabase.from('habit_members').insert(habitMembers);
       }
